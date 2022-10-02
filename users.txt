@@ -1,1 +1,3 @@
-tomas,tomas,pepe,pepeee,hola,adios
+tomas,tomas
+pepe,pepeee
+hola,adios
