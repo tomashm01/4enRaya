@@ -1,5 +1,6 @@
 #include "models/Server.cpp"
 #include "models/Game.cpp"
+#include "models/Cliente.cpp"
 #include <signal.h>
 using namespace std;
 
@@ -112,6 +113,18 @@ void salirCliente(int socket, fd_set *readfds, int *numClientes, int arrayClient
 			send(arrayClientes[j], buffer, sizeof(buffer), 0);
 }
 
+bool usuarioLogged(string user, vector<Cliente> clientes)
+{
+	for (int i = 0; i < clientes.size(); i++)
+	{
+		if (strcmp(clientes[i].getUser().c_str(), user.c_str()) == 0 && clientes[i].getState() == 0)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 int main()
 {
 	int sd, new_sd;
@@ -127,6 +140,8 @@ int main()
 	string user, pass;
 	vector<string> data;
 	bool logged = false;
+	Cliente *cliente;
+	vector<Cliente> clientes;
 	// contadores
 	int i, j, k;
 	int recibidos;
@@ -206,6 +221,11 @@ int main()
 								bzero(buffer, sizeof(buffer));
 								strcpy(buffer, "+OK. Usuario conectado\n");
 								send(new_sd, buffer, sizeof(buffer), 0);
+								// Añado el cliente al vector de clientes
+								cliente = new Cliente(new_sd, Estado::NOLOGGED);
+								cout << "Estado: " << cliente->getState() << endl;
+								clientes.push_back(*cliente);
+								cout << "Nuevo cliente conectado: " << new_sd << endl;
 							}
 							else
 							{
@@ -248,54 +268,65 @@ int main()
 							else
 							{
 								data = split(buffer, ' ');
-								if (data[0]=="USUARIO" && data.size() == 2 && !logged)
+								if (data[0] == "USUARIO" && data.size() == 2 && !usuarioLogged(data[0], clientes))
+								{
+									if (existsUser(data[1]))
 									{
-										if (existsUser(data[1]))
-										{
-											// Comprobar existe usuario
-											user = data[1];
-											bzero(buffer, sizeof(buffer));
-											strcpy(buffer, "+OK.Usuario correcto\n");
-											send(i, buffer, sizeof(buffer), 0);
+										// Comprobar existe usuario
+										user = data[1];
+										bzero(buffer, sizeof(buffer));
+										strcpy(buffer, "+OK.Usuario correcto\n");
+										send(i, buffer, sizeof(buffer), 0);
 
-											// Comprobar contraseña
-											bzero(buffer, sizeof(buffer));
-											recibidos = recv(i, buffer, sizeof(buffer), 0);
-											data = split(buffer, ' ');
-
-											if (data.size() == 2 && data[0]=="PASSWORD")
-											{
-												if (loginUser(user, data[1]))
-												{
-													logged = true;
-													bzero(buffer, sizeof(buffer));
-													strcpy(buffer, "+OK. Usuario validado\n");
-													send(i, buffer, sizeof(buffer), 0);
-													pass = data[1];
-												}
-											}
-											else
-											{
-												bzero(buffer, sizeof(buffer));
-												strcpy(buffer, "-Err. Error en la validación\n");
-												send(i, buffer, sizeof(buffer), 0);
-												user = "";
-												pass = "";
-											}
-											if (recibidos == 0)
-											{
-												printf("El socket %d, ha introducido ctrl+c\n", i);
-												salirCliente(i, &readfds, &numClientes, arrayClientes);
-											}	
-										}
-										else
+										// Comprobar contraseña
+										// bzero(buffer, sizeof(buffer));
+										// recibidos = recv(i, buffer, sizeof(buffer), 0);
+										// data = split(buffer, ' ');
+										if (recibidos == 0)
 										{
-											bzero(buffer, sizeof(buffer));
-											strcpy(buffer, "-Err. Usuario incorrecto\n");
-											send(i, buffer, sizeof(buffer), 0);
+											printf("El socket %d, ha introducido ctrl+c\n", i);
+											salirCliente(i, &readfds, &numClientes, arrayClientes);
 										}
 									}
-								else if (data[0] == "REGISTRO" && !logged && data[1] == "-u" && data[3] == "-p" && data.size()==5)
+									else
+									{
+										bzero(buffer, sizeof(buffer));
+										strcpy(buffer, "-Err. Usuario incorrecto\n");
+										send(i, buffer, sizeof(buffer), 0);
+									}
+								}
+								else if (data.size() == 2 && data[0] == "PASSWORD")
+								{
+									if (loginUser(user, data[1]))
+									{
+										bzero(buffer, sizeof(buffer));
+										strcpy(buffer, "+OK. Usuario validado\n");
+										send(i, buffer, sizeof(buffer), 0);
+										pass = data[1];
+
+										// Modifico estado del cliente
+										for (int i = 0; i < clientes.size(); i++)
+										{
+											if (clientes[i].getIdSocket() == arrayClientes[i])
+											{
+												clientes[i].setPass(pass);
+												clientes[i].setUser(user);
+												clientes[i].setState(Estado::LOGGED);
+												cout << "Cliente " << clientes[i].getIdSocket() << " logueado" << endl;
+											}
+										}
+									}
+									else
+									{
+										bzero(buffer, sizeof(buffer));
+										strcpy(buffer, "-Err. Error en la validación\n");
+										send(i, buffer, sizeof(buffer), 0);
+										user = "";
+										pass = "";
+									}
+								}
+
+								else if (data[0] == "REGISTRO" && data[1] == "-u" && data[3] == "-p" && data.size() == 5)
 								{ // Registro de usuario
 									if (existsUser(data[2]))
 									{
