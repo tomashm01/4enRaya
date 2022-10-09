@@ -1,6 +1,5 @@
-#include "models/Server.cpp"
-#include "models/Game.cpp"
-#include "models/Cliente.cpp"
+#include "models/Game.h"
+#include "models/Jugador.h"
 #include <signal.h>
 using namespace std;
 
@@ -113,11 +112,11 @@ void salirCliente(int socket, fd_set *readfds, int *numClientes, int arrayClient
 			send(arrayClientes[j], buffer, sizeof(buffer), 0);
 }
 
-bool usuarioLogged(string user, vector<Cliente> clientes)
+bool usuarioLogged(string user, vector<Jugador*> clientes)
 {
 	for (int i = 0; i < clientes.size(); i++)
 	{
-		if (strcmp(clientes[i].getUser().c_str(), user.c_str()) == 0)
+		if (strcmp(clientes[i]->getUser().c_str(), user.c_str()) == 0)
 		{
 			cout << "Usuario ya logueado" << endl;
 			return true;
@@ -137,10 +136,9 @@ int main()
 	int arrayClientes[MAX_CLIENTS];
 	int numClientes = 0;
 
-	Game game;
 	vector<string> data;
-	Cliente *cliente;
-	vector<Cliente> clientes;
+	vector<Jugador*> clientes;
+	vector<Game*> partidas;
 	// contadores
 	int i, j, k;
 	int recibidos;
@@ -221,8 +219,7 @@ int main()
 								strcpy(buffer, "+OK. Usuario conectado\n");
 								send(new_sd, buffer, sizeof(buffer), 0);
 								// Añado el cliente al vector de clientes
-								cliente = new Cliente(new_sd, Estado::NOLOGGED);
-								clientes.push_back(*cliente);
+								clientes.push_back(new Jugador(new_sd, Estado::NOLOGGED));
 								cout << "Nuevo cliente conectado: " << new_sd << endl;
 							}
 							else
@@ -261,7 +258,42 @@ int main()
 						{
 							if (strcmp(buffer, "SALIR") == 0)
 							{
+								// Elimino el cliente del vector de clientes
+								for (int j = 0; j < clientes.size(); j++)
+								{
+									if (clientes[j]->getIdSocket() == i)
+									{
+										clientes.erase(clientes.begin() + j);
+										break;
+									}
+								}
+
+								//Elimino el usuario de la partida 
+								for (int j = 0; j < partidas.size(); j++)
+								{
+									if (partidas[j]->getJugador1()->getIdSocket() == i)
+									{
+										partidas.erase(partidas.begin() + j);
+										//Envio mensaje de desconexion al otro jugador y cambio estado
+										bzero(buffer, sizeof(buffer));
+										strcpy(buffer, "+Ok. Tu oponente ha salido de la partida");
+										send(partidas[j]->getJugador2()->getIdSocket(), buffer, sizeof(buffer), 0);
+										partidas[j]->getJugador2()->setState(Estado::ESPERANDO);
+										break;
+									}
+									else if (partidas[j]->getJugador2()->getIdSocket() == i)
+									{
+										partidas.erase(partidas.begin() + j);
+										//Envio mensaje de desconexion al otro jugador y cambio estado
+										bzero(buffer, sizeof(buffer));
+										strcpy(buffer, "+Ok. Tu oponente ha salido de la partida");
+										send(partidas[j]->getJugador1()->getIdSocket(), buffer, sizeof(buffer), 0);
+										partidas[j]->getJugador1()->setState(Estado::ESPERANDO);
+										break;
+									}
+								}
 								salirCliente(i, &readfds, &numClientes, arrayClientes);
+
 							}
 							else
 							{
@@ -280,10 +312,10 @@ int main()
 											// Cambiar estado del cliente
 											for (int j = 0; j < clientes.size(); j++)
 											{
-												if (clientes[j].getIdSocket() == i)
+												if (clientes[j]->getIdSocket() == i)
 												{
-													clientes[j].setState(Estado::LOGGEDWITHOUTPASSWORD);
-													clientes[j].setUser(data[1]);
+													clientes[j]->setState(Estado::LOGGEDWITHOUTPASSWORD);
+													clientes[j]->setUser(data[1]);
 												}
 											}
 										}else{
@@ -311,9 +343,9 @@ int main()
 									string user = "";
 									for (int j = 0; j < clientes.size(); j++)
 									{
-										if (clientes[j].getIdSocket() == i)
+										if (clientes[j]->getIdSocket() == i)
 										{
-											user = clientes[j].getUser();
+											user = clientes[j]->getUser();
 										}
 									}
 									if (loginUser(user, data[1]))
@@ -325,10 +357,10 @@ int main()
 										// Modifico estado del cliente
 										for (int j = 0; j < clientes.size(); j++)
 										{
-											if (clientes[j].getIdSocket() == i)
+											if (clientes[j]->getIdSocket() == i)
 											{
-												clientes[j].setPass(data[1]);
-												clientes[j].setState(Estado::LOGGED);
+												clientes[j]->setPass(data[1]);
+												clientes[j]->setState(Estado::LOGGED);
 											}
 										}
 									}
@@ -358,11 +390,11 @@ int main()
 											// Modifico estado del cliente
 											for (int j = 0; j < clientes.size(); j++)
 											{
-												if (clientes[j].getIdSocket() == i)
+												if (clientes[j]->getIdSocket() == i)
 												{
-													clientes[j].setUser(data[2]);
-													clientes[j].setPass(data[4]);
-													clientes[j].setState(Estado::LOGGED);
+													clientes[j]->setUser(data[2]);
+													clientes[j]->setPass(data[4]);
+													clientes[j]->setState(Estado::LOGGED);
 												}
 											}
 										}
@@ -371,6 +403,59 @@ int main()
 											bzero(buffer, sizeof(buffer));
 											strcpy(buffer, "-Err. Error al registrar usuario\n");
 											send(i, buffer, sizeof(buffer), 0);
+										}
+									}
+								}
+								else if(data.size() == 1 && data[0] == "INICIAR-PARTIDA"){
+									//Compruebo que el usuario está logueado
+									
+									for (int j = 0; j < clientes.size(); j++)
+									{
+										if (clientes[j]->getIdSocket() == i)
+										{
+											if(clientes[j]->getState() == Estado::LOGGED){
+												Jugador* jugador1=clientes[j];
+												jugador1->setState(Estado::ESPERANDO);
+
+												//Busco un jugador en espera
+												bool encontrado = false;
+												
+												for (int k=0; k < clientes.size(); k++)
+												{
+													if (clientes[k]->getState() == Estado::ESPERANDO && clientes[k]->getIdSocket() != i)
+													{
+														Jugador* jugador2=clientes[k];
+														jugador2->setState(Estado::JUGANDO);
+														jugador1->setState(Estado::JUGANDO);
+														encontrado = true;
+														//Creo partida
+														partidas.push_back(new Game(jugador1, jugador2));
+														//Envio mensaje de partida encontrada
+														bzero(buffer, sizeof(buffer));
+														strcpy(buffer, "+Ok.Empieza la partida");
+														send(jugador1->getIdSocket(), buffer, sizeof(buffer), 0);
+														send(jugador2->getIdSocket(), buffer, sizeof(buffer), 0);
+														break;
+													}
+													
+												}
+
+												if(!encontrado){
+													bzero(buffer, sizeof(buffer));
+													strcpy(buffer, "+Ok.Esperando jugadores");
+													send(jugador1->getIdSocket(), buffer, sizeof(buffer), 0);
+												}
+
+											}
+										}
+									}
+								}
+								else if(data.size() == 2 && data[0] == "COLOCAR-FICHA"){
+									//Comprobar que el jugador esta jugando
+									for(int j=0<j<clientes.size();j++;){
+										if(clientes[j]->getIdSocket()==i && clientes[j]->getState()==Estado::JUGANDO){
+											//Comprobar que la partida existe
+											
 										}
 									}
 								}

@@ -15,6 +15,26 @@ using namespace std;
 #define PORT 2060
 #define IP "127.0.0.1"
 
+void mostrarMenuPartida(){
+	vector<string> opciones = {
+		"COLOCAR-FICHA número",
+		"SALIR"};
+	for (int i = 0; i < opciones.size(); i++)
+	{
+		cout << opciones[i] << endl;
+	}
+	cout << endl;
+}
+
+void mostrarMenuEspera(){
+	vector<string> opciones = {"SALIR"};
+	for (int i = 0; i < opciones.size(); i++)
+	{
+		cout << opciones[i] << endl;
+	}
+	cout << endl;
+}
+
 void mostrarOpciones()
 {
 	vector<string> opciones = {
@@ -100,7 +120,7 @@ int main()
 			recv(sd, buffer, sizeof(buffer), 0);
 			cout << buffer << endl;
 			if (strcmp(buffer, "Demasiados clientes conectados") == 0) fin = 1;
-			if (strcmp(buffer, "Desconexión servidor") == 0) fin = 1;
+			else if (strcmp(buffer, "Desconexión servidor") == 0) fin = 1;
 			else mostrarOpciones();
 		}
 		else
