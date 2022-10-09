@@ -14,8 +14,9 @@
 using namespace std;
 enum Estado
 {
-    NOLOGGED, //El usuario aun no ha sido logeado. Puede haber introducido su usuario pero no su password
-    LOGGED, //El usuario ha sido logeado con exito. Pero aun no ha iniciado partida 
+    LOGGEDWITHOUTPASSWORD, //Introduce usuario pero no contraseña
+    NOLOGGED, //El usuario aun no ha introducido usuario ni password
+    LOGGED, //El usuario ha sido logeado con exito 
     JUGANDO, //El usuario esta jugando una partida. Puede haber colocado ficha o no
     ESPERANDO //El usuario esta esperando una partida, porque no hay suficientes jugadores
 };
@@ -32,6 +33,12 @@ public:
         this->idSocket = idSocket;
         this->user = user;
         this->pass = pass;
+        this->state = state;
+    }
+    Cliente(int idSocket,string user,Estado state){
+        this->idSocket = idSocket;
+        this->user = user;
+        this->pass = "";
         this->state = state;
     }
     Cliente(int idSocket,Estado state){

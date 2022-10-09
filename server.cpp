@@ -117,8 +117,9 @@ bool usuarioLogged(string user, vector<Cliente> clientes)
 {
 	for (int i = 0; i < clientes.size(); i++)
 	{
-		if (strcmp(clientes[i].getUser().c_str(), user.c_str()) == 0 && clientes[i].getState() == 0)
+		if (strcmp(clientes[i].getUser().c_str(), user.c_str()) == 0)
 		{
+			cout << "Usuario ya logueado" << endl;
 			return true;
 		}
 	}
@@ -137,9 +138,7 @@ int main()
 	int numClientes = 0;
 
 	Game game;
-	string user, pass;
 	vector<string> data;
-	bool logged = false;
 	Cliente *cliente;
 	vector<Cliente> clientes;
 	// contadores
@@ -223,7 +222,6 @@ int main()
 								send(new_sd, buffer, sizeof(buffer), 0);
 								// Añado el cliente al vector de clientes
 								cliente = new Cliente(new_sd, Estado::NOLOGGED);
-								cout << "Estado: " << cliente->getState() << endl;
 								clientes.push_back(*cliente);
 								cout << "Nuevo cliente conectado: " << new_sd << endl;
 							}
@@ -268,20 +266,32 @@ int main()
 							else
 							{
 								data = split(buffer, ' ');
-								if (data[0] == "USUARIO" && data.size() == 2 && !usuarioLogged(data[0], clientes))
+								if (data[0] == "USUARIO" && data.size() == 2)
 								{
 									if (existsUser(data[1]))
 									{
-										// Comprobar existe usuario
-										user = data[1];
-										bzero(buffer, sizeof(buffer));
-										strcpy(buffer, "+OK.Usuario correcto\n");
-										send(i, buffer, sizeof(buffer), 0);
+										if (!usuarioLogged(data[1], clientes))
+										{
+											// Comprobar existe usuario
+											bzero(buffer, sizeof(buffer));
+											strcpy(buffer, "+OK.Usuario correcto\n");
+											send(i, buffer, sizeof(buffer), 0);
 
-										// Comprobar contraseña
-										// bzero(buffer, sizeof(buffer));
-										// recibidos = recv(i, buffer, sizeof(buffer), 0);
-										// data = split(buffer, ' ');
+											// Cambiar estado del cliente
+											for (int j = 0; j < clientes.size(); j++)
+											{
+												if (clientes[j].getIdSocket() == i)
+												{
+													clientes[j].setState(Estado::LOGGEDWITHOUTPASSWORD);
+													clientes[j].setUser(data[1]);
+												}
+											}
+										}else{
+											bzero(buffer, sizeof(buffer));
+											strcpy(buffer, "-Err. Usuario ya conectado\n");
+											send(i, buffer, sizeof(buffer), 0);
+										}
+
 										if (recibidos == 0)
 										{
 											printf("El socket %d, ha introducido ctrl+c\n", i);
@@ -297,22 +307,28 @@ int main()
 								}
 								else if (data.size() == 2 && data[0] == "PASSWORD")
 								{
+									// Obtener usuario del cliente
+									string user = "";
+									for (int j = 0; j < clientes.size(); j++)
+									{
+										if (clientes[j].getIdSocket() == i)
+										{
+											user = clientes[j].getUser();
+										}
+									}
 									if (loginUser(user, data[1]))
 									{
 										bzero(buffer, sizeof(buffer));
 										strcpy(buffer, "+OK. Usuario validado\n");
 										send(i, buffer, sizeof(buffer), 0);
-										pass = data[1];
 
 										// Modifico estado del cliente
-										for (int i = 0; i < clientes.size(); i++)
+										for (int j = 0; j < clientes.size(); j++)
 										{
-											if (clientes[i].getIdSocket() == arrayClientes[i])
+											if (clientes[j].getIdSocket() == i)
 											{
-												clientes[i].setPass(pass);
-												clientes[i].setUser(user);
-												clientes[i].setState(Estado::LOGGED);
-												cout << "Cliente " << clientes[i].getIdSocket() << " logueado" << endl;
+												clientes[j].setPass(data[1]);
+												clientes[j].setState(Estado::LOGGED);
 											}
 										}
 									}
@@ -321,11 +337,8 @@ int main()
 										bzero(buffer, sizeof(buffer));
 										strcpy(buffer, "-Err. Error en la validación\n");
 										send(i, buffer, sizeof(buffer), 0);
-										user = "";
-										pass = "";
 									}
 								}
-
 								else if (data[0] == "REGISTRO" && data[1] == "-u" && data[3] == "-p" && data.size() == 5)
 								{ // Registro de usuario
 									if (existsUser(data[2]))
@@ -341,6 +354,17 @@ int main()
 											bzero(buffer, sizeof(buffer));
 											strcpy(buffer, "+OK. Usuario registrado\n");
 											send(i, buffer, sizeof(buffer), 0);
+											
+											// Modifico estado del cliente
+											for (int j = 0; j < clientes.size(); j++)
+											{
+												if (clientes[j].getIdSocket() == i)
+												{
+													clientes[j].setUser(data[2]);
+													clientes[j].setPass(data[4]);
+													clientes[j].setState(Estado::LOGGED);
+												}
+											}
 										}
 										else
 										{
