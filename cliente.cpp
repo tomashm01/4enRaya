@@ -119,6 +119,7 @@ int main()
 			bzero(buffer, sizeof(buffer));
 			recv(sd, buffer, sizeof(buffer), 0);
 			cout << buffer << endl;
+
 			if (strcmp(buffer, "Demasiados clientes conectados") == 0) fin = 1;
 			else if (strcmp(buffer, "Desconexión servidor") == 0) fin = 1;
 			else mostrarOpciones();

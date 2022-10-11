@@ -112,7 +112,7 @@ void salirCliente(int socket, fd_set *readfds, int *numClientes, int arrayClient
 			send(arrayClientes[j], buffer, sizeof(buffer), 0);
 }
 
-bool usuarioLogged(string user, vector<Jugador*> clientes)
+bool usuarioLogged(string user, vector<Jugador *> clientes)
 {
 	for (int i = 0; i < clientes.size(); i++)
 	{
@@ -133,12 +133,10 @@ int main()
 	socklen_t from_len;
 	fd_set readfds, auxfds;
 	int salida;
-	int arrayClientes[MAX_CLIENTS];
-	int numClientes = 0;
 
 	vector<string> data;
-	vector<Jugador*> clientes;
-	vector<Game*> partidas;
+	vector<Jugador *> clientes;
+	vector<Game *> partidas;
 	// contadores
 	int i, j, k;
 	int recibidos;
@@ -210,10 +208,9 @@ int main()
 						}
 						else
 						{
-							if (numClientes < MAX_CLIENTS)
+							if (clientes.size() < MAX_CLIENTS)
 							{
-								arrayClientes[numClientes] = new_sd;
-								numClientes++;
+
 								FD_SET(new_sd, &readfds);
 								bzero(buffer, sizeof(buffer));
 								strcpy(buffer, "+OK. Usuario conectado\n");
@@ -238,13 +235,13 @@ int main()
 						if (strcmp(buffer, "SALIR") == 0)
 						{
 
-							for (j = 0; j < numClientes; j++)
+							for (j = 0; j < clientes.size(); j++)
 							{
 								bzero(buffer, sizeof(buffer));
 								strcpy(buffer, "Desconexión servidor");
-								send(arrayClientes[j], buffer, sizeof(buffer), 0);
-								close(arrayClientes[j]);
-								FD_CLR(arrayClientes[j], &readfds);
+								send(clientes[j]->getIdSocket(), buffer, sizeof(buffer), 0);
+								close(clientes[j]->getIdSocket());
+								FD_CLR(clientes[j]->getIdSocket(), &readfds);
 							}
 							close(sd);
 							exit(-1);
@@ -268,13 +265,13 @@ int main()
 									}
 								}
 
-								//Elimino el usuario de la partida 
+								// Elimino el usuario de la partida
 								for (int j = 0; j < partidas.size(); j++)
 								{
 									if (partidas[j]->getJugador1()->getIdSocket() == i)
 									{
 										partidas.erase(partidas.begin() + j);
-										//Envio mensaje de desconexion al otro jugador y cambio estado
+										// Envio mensaje de desconexion al otro jugador y cambio estado
 										bzero(buffer, sizeof(buffer));
 										strcpy(buffer, "+Ok. Tu oponente ha salido de la partida");
 										send(partidas[j]->getJugador2()->getIdSocket(), buffer, sizeof(buffer), 0);
@@ -284,7 +281,7 @@ int main()
 									else if (partidas[j]->getJugador2()->getIdSocket() == i)
 									{
 										partidas.erase(partidas.begin() + j);
-										//Envio mensaje de desconexion al otro jugador y cambio estado
+										// Envio mensaje de desconexion al otro jugador y cambio estado
 										bzero(buffer, sizeof(buffer));
 										strcpy(buffer, "+Ok. Tu oponente ha salido de la partida");
 										send(partidas[j]->getJugador1()->getIdSocket(), buffer, sizeof(buffer), 0);
@@ -292,8 +289,8 @@ int main()
 										break;
 									}
 								}
-								salirCliente(i, &readfds, &numClientes, arrayClientes);
-
+								close(i);
+								FD_CLR(i, &readfds);
 							}
 							else
 							{
@@ -318,7 +315,9 @@ int main()
 													clientes[j]->setUser(data[1]);
 												}
 											}
-										}else{
+										}
+										else
+										{
 											bzero(buffer, sizeof(buffer));
 											strcpy(buffer, "-Err. Usuario ya conectado\n");
 											send(i, buffer, sizeof(buffer), 0);
@@ -327,7 +326,16 @@ int main()
 										if (recibidos == 0)
 										{
 											printf("El socket %d, ha introducido ctrl+c\n", i);
-											salirCliente(i, &readfds, &numClientes, arrayClientes);
+											close(i);
+											FD_CLR(i, &readfds);
+											for (int j = 0; j < clientes.size(); j++)
+											{
+												if (clientes[j]->getIdSocket() == i)
+												{
+													clientes.erase(clientes.begin() + j);
+													break;
+												}
+											}
 										}
 									}
 									else
@@ -386,7 +394,7 @@ int main()
 											bzero(buffer, sizeof(buffer));
 											strcpy(buffer, "+OK. Usuario registrado\n");
 											send(i, buffer, sizeof(buffer), 0);
-											
+
 											// Modifico estado del cliente
 											for (int j = 0; j < clientes.size(); j++)
 											{
@@ -406,56 +414,147 @@ int main()
 										}
 									}
 								}
-								else if(data.size() == 1 && data[0] == "INICIAR-PARTIDA"){
-									//Compruebo que el usuario está logueado
-									
+								else if (data.size() == 1 && data[0] == "INICIAR-PARTIDA")
+								{
+									// Compruebo que el usuario está logueado
+
 									for (int j = 0; j < clientes.size(); j++)
 									{
-										if (clientes[j]->getIdSocket() == i)
+										if (clientes[j]->getIdSocket() == i && clientes[j]->getState() == Estado::LOGGED)
 										{
-											if(clientes[j]->getState() == Estado::LOGGED){
-												Jugador* jugador1=clientes[j];
-												jugador1->setState(Estado::ESPERANDO);
 
-												//Busco un jugador en espera
-												bool encontrado = false;
-												
-												for (int k=0; k < clientes.size(); k++)
+											Jugador *jugador1 = clientes[j];
+											jugador1->setState(Estado::ESPERANDO);
+
+											// Busco un jugador en espera
+											bool encontrado = false;
+
+											for (int k = 0; k < clientes.size(); k++)
+											{
+												if (clientes[k]->getState() == Estado::ESPERANDO && clientes[k]->getIdSocket() != i && partidas.size() <= MAX_GAMES)
 												{
-													if (clientes[k]->getState() == Estado::ESPERANDO && clientes[k]->getIdSocket() != i)
-													{
-														Jugador* jugador2=clientes[k];
-														jugador2->setState(Estado::JUGANDO);
-														jugador1->setState(Estado::JUGANDO);
-														encontrado = true;
-														//Creo partida
-														partidas.push_back(new Game(jugador1, jugador2));
-														//Envio mensaje de partida encontrada
-														bzero(buffer, sizeof(buffer));
-														strcpy(buffer, "+Ok.Empieza la partida");
-														send(jugador1->getIdSocket(), buffer, sizeof(buffer), 0);
-														send(jugador2->getIdSocket(), buffer, sizeof(buffer), 0);
-														break;
-													}
-													
-												}
-
-												if(!encontrado){
+													Jugador *jugador2 = clientes[k];
+													jugador2->setState(Estado::JUGANDO);
+													jugador1->setState(Estado::JUGANDO);
+													encontrado = true;
+													// Creo partida
+													partidas.push_back(new Game(jugador1, jugador2));
+													// Envio mensaje de partida encontrada
 													bzero(buffer, sizeof(buffer));
-													strcpy(buffer, "+Ok.Esperando jugadores");
+													strcpy(buffer, "+Ok.Empieza la partida");
 													send(jugador1->getIdSocket(), buffer, sizeof(buffer), 0);
+													send(jugador2->getIdSocket(), buffer, sizeof(buffer), 0);
+													break;
 												}
+											}
 
+											if (!encontrado)
+											{
+												bzero(buffer, sizeof(buffer));
+												strcpy(buffer, "+Ok.Esperando jugadores");
+												send(jugador1->getIdSocket(), buffer, sizeof(buffer), 0);
 											}
 										}
 									}
 								}
-								else if(data.size() == 2 && data[0] == "COLOCAR-FICHA"){
-									//Comprobar que el jugador esta jugando
-									for(int j=0<j<clientes.size();j++;){
-										if(clientes[j]->getIdSocket()==i && clientes[j]->getState()==Estado::JUGANDO){
-											//Comprobar que la partida existe
-											
+								else if (data.size() == 2 && data[0] == "COLOCAR-FICHA")
+								{
+
+									// Pasar string a int
+									int numColumna = atoi(data[1].c_str());
+
+									// Comprobar que el usuari ha introducido un numero entre 1 y 7 y hay espacios
+									if (!partidas[j]->hayEspacios() || numColumna < 0 && numColumna > 7)
+									{
+										bzero(buffer, sizeof(buffer));
+										strcpy(buffer, "-Err. Numero de columna incorrecto.");
+										send(i, buffer, sizeof(buffer), 0);
+									}
+									else
+									{
+										for (int j = 0 < j < partidas.size(); j++;)
+										{
+											if (partidas[j]->getJugador1()->getIdSocket() == i && partidas[j]->getTurno() == 1)
+											{
+												// Coloca la ficha el jugador 1
+												if (partidas[j]->colocarFicha(numColumna) == -1)
+												{
+													bzero(buffer, sizeof(buffer));
+													strcpy(buffer, "-Err. Columna llena");
+													send(i, buffer, sizeof(buffer), 0);
+												}
+												else
+												{
+													// Envia el mensaje al jugador 2
+													bzero(buffer, sizeof(buffer));
+													strcpy(buffer, "+Ok.Turno de partida");
+													send(partidas[j]->getJugador2()->getIdSocket(), buffer, sizeof(buffer), 0);
+												}
+											}
+											else if (partidas[j]->getJugador2()->getIdSocket() == i && partidas[j]->getTurno() == 2)
+											{
+												// Coloca la ficha el jugador 2
+												if (partidas[j]->colocarFicha(numColumna) == -1)
+												{
+													bzero(buffer, sizeof(buffer));
+													strcpy(buffer, "-Err. Columna llena");
+													send(i, buffer, sizeof(buffer), 0);
+												}
+												else
+												{
+													// Envia el mensaje al jugador 1
+													bzero(buffer, sizeof(buffer));
+													strcpy(buffer, "+Ok.Turno de partida");
+													send(partidas[j]->getJugador1()->getIdSocket(), buffer, sizeof(buffer), 0);
+												}
+											}
+											else
+											{
+												bzero(buffer, sizeof(buffer));
+												strcpy(buffer, "-Err. Debe esperar su turno");
+												send(i, buffer, sizeof(buffer), 0);
+												break;
+											}
+											// Comprobar si hay ganador
+											if (partidas[j]->ganadorPartida())
+											{
+												bzero(buffer, sizeof(buffer));
+
+												if (partidas[j]->getGanador() == 1)
+												{
+													string mensaje = "+Ok.Ganador: " + partidas[j]->getJugador1()->getUser() + " ha ganado la partida";
+													strcpy(buffer, mensaje.c_str());
+												}
+												else if (partidas[j]->getGanador() == 2)
+												{
+													string mensaje = "+Ok.Ganador: " + partidas[j]->getJugador2()->getUser() + " ha ganado la partida";
+													strcpy(buffer, mensaje.c_str());
+												}
+
+												send(partidas[j]->getJugador1()->getIdSocket(), buffer, sizeof(buffer), 0);
+												send(partidas[j]->getJugador2()->getIdSocket(), buffer, sizeof(buffer), 0);
+
+												partidas[j]->getJugador1()->setState(Estado::LOGGED);
+												partidas[j]->getJugador2()->setState(Estado::LOGGED);
+
+												// Eliminar partida
+												partidas.erase(partidas.begin() + j);
+											}
+
+											// Comprobar si hay empate
+											if (!partidas[j]->ganadorPartida() && !partidas[j]->hayEspacios())
+											{
+												bzero(buffer, sizeof(buffer));
+												strcpy(buffer, "+Ok.Se ha producido un empate en la partida");
+												send(partidas[j]->getJugador1()->getIdSocket(), buffer, sizeof(buffer), 0);
+												send(partidas[j]->getJugador2()->getIdSocket(), buffer, sizeof(buffer), 0);
+
+												partidas[j]->getJugador1()->setState(Estado::LOGGED);
+												partidas[j]->getJugador2()->setState(Estado::LOGGED);
+
+												// Eliminar partida
+												partidas.erase(partidas.begin() + j);
+											}
 										}
 									}
 								}
@@ -471,7 +570,17 @@ int main()
 						if (recibidos == 0)
 						{
 							printf("El socket %d, ha introducido ctrl+c\n", i);
-							salirCliente(i, &readfds, &numClientes, arrayClientes);
+							close(i);
+							FD_CLR(i, &readfds);
+							// Encontrar posicion del cliente en el vector
+							for (int j = 0; j < clientes.size(); j++)
+							{
+								if (clientes[j]->getIdSocket() == i)
+								{
+									clientes.erase(clientes.begin() + j);
+									break;
+								}
+							}
 						}
 					}
 				}

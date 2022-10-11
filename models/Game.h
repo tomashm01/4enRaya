@@ -26,7 +26,7 @@ class Game{
     public:
         Game(Jugador* jugador1, Jugador* jugador2);
         bool hayEspacios();
-        void imprimirTablero();
+        string imprimirTablero();
         int colocarFicha(int columna);
         int getTurno();
         int getGanador();
