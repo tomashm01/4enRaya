@@ -15,7 +15,8 @@ using namespace std;
 #define PORT 2060
 #define IP "127.0.0.1"
 
-void mostrarMenuPartida(){
+void mostrarMenuPartida()
+{
 	vector<string> opciones = {
 		"COLOCAR-FICHA número",
 		"SALIR"};
@@ -26,7 +27,8 @@ void mostrarMenuPartida(){
 	cout << endl;
 }
 
-void mostrarMenuEspera(){
+void mostrarMenuEspera()
+{
 	vector<string> opciones = {"SALIR"};
 	for (int i = 0; i < opciones.size(); i++)
 	{
@@ -86,6 +88,8 @@ int main()
 	int sd;
 	struct sockaddr_in sockname;
 	char buffer[250];
+	int tamTablero = 0;
+	char tablero[250];
 	socklen_t len_sockname;
 	fd_set readfds, auxfds;
 	int salida;
@@ -120,15 +124,103 @@ int main()
 			recv(sd, buffer, sizeof(buffer), 0);
 			cout << buffer << endl;
 
-			if (strcmp(buffer, "Demasiados clientes conectados") == 0) fin = 1;
-			else if (strcmp(buffer, "Desconexión servidor") == 0) fin = 1;
-			else mostrarOpciones();
+			// Comprobar que el buffer empieza por "ESPERANDO"
+			string bufferStr(buffer);
+			vector<string> bufferSplit = split(bufferStr, '.');
+
+			if (strcmp(bufferSplit[1].c_str(), "Nuevo tablero") == 0)
+			{
+				cout << "|1|2|3|4|5|6|7|" << endl
+					 << "|";
+				int contador = 0;
+				for (int i = 0; i < sizeof(buffer); i++)
+				{
+
+					if (buffer[i] == ';')
+					{
+						cout << "|" << endl;
+						contador++;
+						if (contador != 6)
+						{
+							cout << "|";
+						}
+					}
+					else if (buffer[i] == '-')
+					{
+						cout << " ";
+					}
+					else if (buffer[i] == ',')
+					{
+						cout << "|";
+					}
+					else if (buffer[i] == 'x')
+					{
+						cout << "x";
+					}
+					else if (buffer[i] == 'o')
+					{
+						cout << "o";
+					}
+					else if (buffer[i] == ' ')
+					{
+						cout << "";
+					}
+				}
+			}
+			else if (strcmp(bufferSplit[1].c_str(), "Empieza la partida") == 0)
+			{
+
+				// Recorrer cada posicion del buffer y mostrarlo
+				cout << "|1|2|3|4|5|6|7|" << endl
+					 << "|";
+				int contador = 0;
+				for (int i = 0; i < sizeof(buffer); i++)
+				{
+
+					if (buffer[i] == ';')
+					{
+						cout << "|" << endl;
+						contador++;
+						if (contador != 6)
+						{
+							cout << "|";
+						}
+					}
+					else if (buffer[i] == '-')
+					{
+						cout << " ";
+					}
+					else if (buffer[i] == ',')
+					{
+						cout << "|";
+					}
+					else if (buffer[i] == 'x')
+					{
+						cout << "x";
+					}
+					else if (buffer[i] == 'o')
+					{
+						cout << "o";
+					}
+					else if (buffer[i] == ' ')
+					{
+						cout << "";
+					}
+				}
+			}
+
+			if (strcmp(buffer, "Demasiados clientes conectados") == 0)
+				fin = 1;
+			else if (strcmp(buffer, "Desconexión servidor") == 0)
+				fin = 1;
+			else
+				mostrarOpciones();
 		}
 		else
 		{
 			if (FD_ISSET(0, &auxfds))
 			{
-				
+
 				bzero(buffer, sizeof(buffer));
 				cin.getline(buffer, sizeof(buffer));
 				if (strcmp(buffer, "SALIR") == 0)

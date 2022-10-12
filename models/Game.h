@@ -26,12 +26,13 @@ class Game{
     public:
         Game(Jugador* jugador1, Jugador* jugador2);
         bool hayEspacios();
-        string imprimirTablero();
+        void imprimirTablero();
         int colocarFicha(int columna);
         int getTurno();
         int getGanador();
         Jugador* getJugador1();
         Jugador* getJugador2();
         bool ganadorPartida();
+        char getTablero(int i, int j);
 };
 #endif

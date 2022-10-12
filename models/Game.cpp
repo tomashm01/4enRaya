@@ -29,18 +29,16 @@ bool Game::hayEspacios()
     }
     return false;
 }
-string Game::imprimirTablero()
+void Game::imprimirTablero()
 {
-    string tablero = "+Ok.Empieza la partida. ";
     for (int i = 0; i < 6; i++)
     {
         for (int j = 0; j < 7; j++)
         {
-            tablero += this->tablero[i][j] + ",";
+            cout << tablero[i][j] << " ";
         }
-        tablero += ";";
+        cout << endl;
     }
-    return tablero;
 }
 int Game::colocarFicha(int columna)
 {
@@ -151,3 +149,7 @@ Jugador *Game::getJugador2()
     return jugador2;
 }
 
+char Game::getTablero(int i, int j)
+{
+    return tablero[i][j];
+}
