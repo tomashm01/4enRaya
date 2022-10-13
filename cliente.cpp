@@ -122,13 +122,14 @@ int main()
 
 			bzero(buffer, sizeof(buffer));
 			recv(sd, buffer, sizeof(buffer), 0);
-			cout << buffer << endl;
+			
 
 			// Comprobar que el buffer empieza por "ESPERANDO"
 			string bufferStr(buffer);
 			vector<string> bufferSplit = split(bufferStr, '.');
 
-			if (strcmp(bufferSplit[1].c_str(), "Nuevo tablero") == 0)
+
+			if (bufferSplit.size()>1 && strcmp(bufferSplit[1].c_str(), "Nuevo tablero") == 0)
 			{
 				cout << "|1|2|3|4|5|6|7|" << endl
 					 << "|";
@@ -167,7 +168,7 @@ int main()
 					}
 				}
 			}
-			else if (strcmp(bufferSplit[1].c_str(), "Empieza la partida") == 0)
+			else if (bufferSplit.size()>1 && strcmp(bufferSplit[1].c_str(), "Empieza la partida") == 0)
 			{
 
 				// Recorrer cada posicion del buffer y mostrarlo
@@ -207,6 +208,8 @@ int main()
 						cout << "";
 					}
 				}
+			}else{
+				cout << buffer << endl;
 			}
 
 			if (strcmp(buffer, "Demasiados clientes conectados") == 0)

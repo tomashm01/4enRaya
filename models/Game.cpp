@@ -42,7 +42,7 @@ void Game::imprimirTablero()
 }
 int Game::colocarFicha(int columna)
 {
-    if (columna < 1 || columna > 7)
+    if (columna < 1 || columna > 8)
     {
         return -1;
     }
@@ -53,12 +53,12 @@ int Game::colocarFicha(int columna)
         {
             if (turno == 1)
             {
-                tablero[i][columna] = 'X';
+                tablero[i][columna] = 'o';
                 turno = 2;
             }
             else
             {
-                tablero[i][columna] = 'O';
+                tablero[i][columna] = 'x';
                 turno = 1;
             }
             return 1;
@@ -76,7 +76,7 @@ bool Game::ganadorPartida()
         {
             if (tablero[i][j] != '-' && tablero[i][j] == tablero[i][j + 1] && tablero[i][j] == tablero[i][j + 2] && tablero[i][j] == tablero[i][j + 3])
             {
-                if (tablero[i][j] == 'X')
+                if (tablero[i][j] == 'o')
                 {
                     ganador = 1;
                 }
@@ -95,7 +95,7 @@ bool Game::ganadorPartida()
         {
             if (tablero[i][j] != '-' && tablero[i][j] == tablero[i + 1][j] && tablero[i][j] == tablero[i + 2][j] && tablero[i][j] == tablero[i + 3][j])
             {
-                if (tablero[i][j] == 'X')
+                if (tablero[i][j] == 'o')
                 {
                     ganador = 1;
                 }
@@ -114,7 +114,26 @@ bool Game::ganadorPartida()
         {
             if (tablero[i][j] != '-' && tablero[i][j] == tablero[i + 1][j + 1] && tablero[i][j] == tablero[i + 2][j + 2] && tablero[i][j] == tablero[i + 3][j + 3])
             {
-                if (tablero[i][j] == 'X')
+                if (tablero[i][j] == 'o')
+                {
+                    ganador = 1;
+                }
+                else
+                {
+                    ganador = 2;
+                }
+                return true;
+            }
+        }
+    }
+    // Comprobar que no hay 4 en raya en diagonal inversa
+    for (int i = 3; i < 6; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            if (tablero[i][j] != '-' && tablero[i][j] == tablero[i - 1][j + 1] && tablero[i][j] == tablero[i - 2][j + 2] && tablero[i][j] == tablero[i - 3][j + 3])
+            {
+                if (tablero[i][j] == 'o')
                 {
                     ganador = 1;
                 }
@@ -152,4 +171,28 @@ Jugador *Game::getJugador2()
 char Game::getTablero(int i, int j)
 {
     return tablero[i][j];
+}
+
+void Game::setTablero(char tablero[6][7])
+{
+    for (int i = 0; i < 6; i++)
+    {
+        for (int j = 0; j < 7; j++)
+        {
+            this->tablero[i][j] = tablero[i][j];
+        }
+    }
+}
+
+void Game::tableroMierda(){
+    char tablero[6][7]={
+        {'-','-','-','-','-','-','x'},
+        {'-','-','-','-','-','x','-'},
+        {'-','-','-','-','o','-','-'},
+        {'-','-','-','x','-','-','-'},
+        {'-','-','-','-','-','-','-'},
+        {'-','-','-','-','-','-','-'}
+    };  
+    setTablero(tablero);
+
 }

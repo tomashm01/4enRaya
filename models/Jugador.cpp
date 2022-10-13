@@ -18,6 +18,13 @@ Jugador::Jugador(int idSocket,Estado state){
     estado = state;
 }
 
+Jugador::Jugador(){
+    socketfd = 0;
+    usuario = "";
+    password = "";
+    estado = Estado::NOLOGGED;
+}
+
 int Jugador::getIdSocket(){
     return socketfd;
 }

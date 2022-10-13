@@ -480,11 +480,17 @@ int main()
 													jugador1->setState(Estado::JUGANDO);
 													encontrado = true;
 													// Creo partida
-													partidas.push_back(new Game(jugador1, jugador2));
+													partidas.push_back(new Game(jugador2, jugador1));
 													// Envio mensaje de partida encontrada
 													bzero(buffer, sizeof(buffer));
 													strcpy(buffer, "+Ok.Empieza la partida. -,-,-,-,-,-,-; -,-,-,-,-,-,-; -,-,-,-,-,-,-; -,-,-,-,-,-,-; -,-,-,-,-,-,-;-,-,-,-,-,-,-;");
 													send(jugador1->getIdSocket(), buffer, sizeof(buffer), 0);
+													send(jugador2->getIdSocket(), buffer, sizeof(buffer), 0);
+													
+
+													//Envio turno al jugador 1
+													bzero(buffer, sizeof(buffer));
+													strcpy(buffer, "+Ok.Tu turno");
 													send(jugador2->getIdSocket(), buffer, sizeof(buffer), 0);
 													break;
 												}
@@ -510,13 +516,7 @@ int main()
 										{
 											for(int k=0;k<6;k++){
 												for(int l=0;l<7;l++){
-													if(partidas[j]->getTablero(k,l) == 'X'){
-														mensajeTablero += "X";
-													}else if(partidas[j]->getTablero(k,l) == 'O'){
-														mensajeTablero += "O";
-													}else if(partidas[j]->getTablero(k,l) == '-'){
-														mensajeTablero += "-";
-													}
+													mensajeTablero += partidas[j]->getTablero(k,l);
 													mensajeTablero += ",";
 												}
 												mensajeTablero += "; ";
@@ -542,7 +542,7 @@ int main()
 									int numColumna = atoi(data[1].c_str());
 
 									// Comprobar que el usuari ha introducido un numero entre 1 y 7 y hay espacios
-									if (!partidas[j]->hayEspacios() || numColumna < 0 && numColumna > 7)
+									if (!partidas[j]->hayEspacios() || (numColumna < 0 && numColumna > 7))
 									{
 										bzero(buffer, sizeof(buffer));
 										strcpy(buffer, "-Err. Numero de columna incorrecto.");

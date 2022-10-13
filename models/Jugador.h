@@ -34,6 +34,7 @@ class Jugador{
         Jugador(int idSocket, string user, string pass, Estado state);
         Jugador(int idSocket,string user,Estado state);
         Jugador(int idSocket,Estado state);
+        Jugador();
         int getIdSocket();
         string getUser();
         string getPass();
