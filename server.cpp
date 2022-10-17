@@ -180,7 +180,7 @@ int main()
 						}
 						else
 						{
-							if (clientes.size() < MAX_CLIENTS)
+							if (clientes.size() <= MAX_CLIENTS)
 							{
 
 								FD_SET(new_sd, &readfds);
