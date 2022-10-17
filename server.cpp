@@ -86,32 +86,6 @@ vector<string> split(string str, char pattern)
 	return results;
 }
 
-void salirCliente(int socket, fd_set *readfds, int *numClientes, int arrayClientes[])
-{
-
-	char buffer[250];
-	int j;
-
-	close(socket);
-	FD_CLR(socket, readfds);
-
-	// Re-estructurar el array de clientes
-	for (j = 0; j < (*numClientes) - 1; j++)
-		if (arrayClientes[j] == socket)
-			break;
-	for (; j < (*numClientes) - 1; j++)
-		(arrayClientes[j] = arrayClientes[j + 1]);
-
-	(*numClientes)--;
-
-	bzero(buffer, sizeof(buffer));
-	sprintf(buffer, "Desconexión del cliente: %d\n", socket);
-
-	for (j = 0; j < (*numClientes); j++)
-		if (arrayClientes[j] != socket)
-			send(arrayClientes[j], buffer, sizeof(buffer), 0);
-}
-
 bool usuarioLogged(string user, vector<Jugador *> clientes)
 {
 	for (int i = 0; i < clientes.size(); i++)
@@ -138,9 +112,7 @@ int main()
 	vector<Jugador *> clientes;
 	vector<Game *> partidas;
 	// contadores
-	int i, j, k;
 	int recibidos;
-	char identificador[MSG_SIZE];
 
 	int on, ret;
 
@@ -192,7 +164,7 @@ int main()
 		if (salida > 0)
 		{
 
-			for (i = 0; i < FD_SETSIZE; i++)
+			for (int i = 0; i < FD_SETSIZE; i++)
 			{
 
 				// Buscamos el socket por el que se ha establecido la comunicación
@@ -235,7 +207,7 @@ int main()
 						if (strcmp(buffer, "SALIR") == 0)
 						{
 
-							for (j = 0; j < clientes.size(); j++)
+							for (int j = 0; j < clientes.size(); j++)
 							{
 								bzero(buffer, sizeof(buffer));
 								strcpy(buffer, "Desconexión servidor");
@@ -459,6 +431,7 @@ int main()
 								else if (data.size() == 1 && data[0] == "INICIAR-PARTIDA")
 								{
 									// Compruebo que el usuario está logueado
+									bool logged = false;
 
 									for (int j = 0; j < clientes.size(); j++)
 									{
@@ -470,6 +443,7 @@ int main()
 
 											// Busco un jugador en espera
 											bool encontrado = false;
+											logged = true;
 
 											for (int k = 0; k < clientes.size(); k++)
 											{
@@ -486,11 +460,10 @@ int main()
 													strcpy(buffer, "+Ok.Empieza la partida. -,-,-,-,-,-,-; -,-,-,-,-,-,-; -,-,-,-,-,-,-; -,-,-,-,-,-,-; -,-,-,-,-,-,-;-,-,-,-,-,-,-;");
 													send(jugador1->getIdSocket(), buffer, sizeof(buffer), 0);
 													send(jugador2->getIdSocket(), buffer, sizeof(buffer), 0);
-													
 
-													//Envio turno al jugador 1
+													// Envio turno al jugador que lleva mas rato esperando
 													bzero(buffer, sizeof(buffer));
-													strcpy(buffer, "+Ok.Tu turno");
+													strcpy(buffer, "+Ok.Turno de partida");
 													send(jugador2->getIdSocket(), buffer, sizeof(buffer), 0);
 													break;
 												}
@@ -504,69 +477,69 @@ int main()
 											}
 										}
 									}
+									if (!logged)
+									{
+										bzero(buffer, sizeof(buffer));
+										strcpy(buffer, "-Err. Debes estar logueado para jugar una partida");
+										send(i, buffer, sizeof(buffer), 0);
+										break;
+									}
 								}
 								else if (data.size() == 2 && data[0] == "COLOCAR-FICHA")
 								{
 
-									//Mostrar tablero
-									string mensajeTablero = "+Ok. Nuevo tablero. ";
-									for (int j = 0; j < partidas.size(); j++)
+									// Compruebo que el usuario está jugando
+									bool playing = false;
+									for (int j = 0; j < clientes.size(); j++)
 									{
-										if (partidas[j]->getJugador1()->getIdSocket() == i || partidas[j]->getJugador2()->getIdSocket() == i)
+										if (clientes[j]->getIdSocket() == i && clientes[j]->getState() == Estado::JUGANDO)
 										{
-											for(int k=0;k<6;k++){
-												for(int l=0;l<7;l++){
-													mensajeTablero += partidas[j]->getTablero(k,l);
-													mensajeTablero += ",";
-												}
-												mensajeTablero += "; ";
-											}
+											playing = true;
+											break;
 										}
 									}
 
-									//Envio tablero
-									bzero(buffer, sizeof(buffer));
-									strcpy(buffer, mensajeTablero.c_str());
-									//Busco la partida
-									for (int j = 0; j < partidas.size(); j++)
+									if (!playing)
 									{
-										if (partidas[j]->getJugador1()->getIdSocket() == i || partidas[j]->getJugador2()->getIdSocket() == i)
-										{
-											//Envio tablero
-											send(partidas[j]->getJugador1()->getIdSocket(), buffer, sizeof(buffer), 0);
-											send(partidas[j]->getJugador2()->getIdSocket(), buffer, sizeof(buffer), 0);
-										}
+										bzero(buffer, sizeof(buffer));
+										strcpy(buffer, "-Err. Debes estar jugando una partida para colocar una ficha");
+										send(i, buffer, sizeof(buffer), 0);
+										break;
 									}
-
 									// Pasar string a int
 									int numColumna = atoi(data[1].c_str());
 
-									// Comprobar que el usuari ha introducido un numero entre 1 y 7 y hay espacios
-									if (!partidas[j]->hayEspacios() || (numColumna < 0 && numColumna > 7))
+									// Comprobar que el usuario ha introducido un numero entre 1 y 7
+									if (numColumna < 0 || numColumna > 7)
 									{
 										bzero(buffer, sizeof(buffer));
 										strcpy(buffer, "-Err. Numero de columna incorrecto.");
 										send(i, buffer, sizeof(buffer), 0);
+										break;
 									}
-									else
+
+									// Mostrar datos de la partida
+									int idNextJugador = -1;
+
+									for (int j = 0; j < partidas.size(); j++)
 									{
-										for (int j = 0 < j < partidas.size(); j++;)
+										if (partidas[j]->getJugador1()->getIdSocket() == i || partidas[j]->getJugador2()->getIdSocket() == i)
 										{
 											if (partidas[j]->getJugador1()->getIdSocket() == i && partidas[j]->getTurno() == 1)
 											{
 												// Coloca la ficha el jugador 1
+
 												if (partidas[j]->colocarFicha(numColumna) == -1)
 												{
 													bzero(buffer, sizeof(buffer));
-													strcpy(buffer, "-Err. Columna llena");
+													strcpy(buffer, "Err. Debe seleccionar otra columna que tenga alguna casilla disponible");
 													send(i, buffer, sizeof(buffer), 0);
+													break;
 												}
 												else
 												{
 													// Envia el mensaje al jugador 2
-													bzero(buffer, sizeof(buffer));
-													strcpy(buffer, "+Ok.Turno de partida");
-													send(partidas[j]->getJugador2()->getIdSocket(), buffer, sizeof(buffer), 0);
+													idNextJugador = partidas[j]->getJugador2()->getIdSocket();
 												}
 											}
 											else if (partidas[j]->getJugador2()->getIdSocket() == i && partidas[j]->getTurno() == 2)
@@ -575,15 +548,14 @@ int main()
 												if (partidas[j]->colocarFicha(numColumna) == -1)
 												{
 													bzero(buffer, sizeof(buffer));
-													strcpy(buffer, "-Err. Columna llena");
+													strcpy(buffer, "Err. Debe seleccionar otra columna que tenga alguna casilla disponible");
 													send(i, buffer, sizeof(buffer), 0);
+													break;
 												}
 												else
 												{
 													// Envia el mensaje al jugador 1
-													bzero(buffer, sizeof(buffer));
-													strcpy(buffer, "+Ok.Turno de partida");
-													send(partidas[j]->getJugador1()->getIdSocket(), buffer, sizeof(buffer), 0);
+													idNextJugador = partidas[j]->getJugador1()->getIdSocket();
 												}
 											}
 											else
@@ -593,46 +565,80 @@ int main()
 												send(i, buffer, sizeof(buffer), 0);
 												break;
 											}
-											// Comprobar si hay ganador
-											if (partidas[j]->ganadorPartida())
+										}
+
+										// Comprobar si hay ganador
+										if (partidas[j]->ganadorPartida())
+										{
+											bzero(buffer, sizeof(buffer));
+
+											if (partidas[j]->getGanador() == 1)
 											{
-												bzero(buffer, sizeof(buffer));
-
-												if (partidas[j]->getGanador() == 1)
-												{
-													string mensaje = "+Ok.Ganador: " + partidas[j]->getJugador1()->getUser() + " ha ganado la partida";
-													strcpy(buffer, mensaje.c_str());
-												}
-												else if (partidas[j]->getGanador() == 2)
-												{
-													string mensaje = "+Ok.Ganador: " + partidas[j]->getJugador2()->getUser() + " ha ganado la partida";
-													strcpy(buffer, mensaje.c_str());
-												}
-
-												send(partidas[j]->getJugador1()->getIdSocket(), buffer, sizeof(buffer), 0);
-												send(partidas[j]->getJugador2()->getIdSocket(), buffer, sizeof(buffer), 0);
-
-												partidas[j]->getJugador1()->setState(Estado::LOGGED);
-												partidas[j]->getJugador2()->setState(Estado::LOGGED);
-
-												// Eliminar partida
-												partidas.erase(partidas.begin() + j);
+												string mensaje = "+Ok.Ganador: " + partidas[j]->getJugador1()->getUser() + " ha ganado la partida";
+												strcpy(buffer, mensaje.c_str());
+											}
+											else if (partidas[j]->getGanador() == 2)
+											{
+												string mensaje = "+Ok.Ganador: " + partidas[j]->getJugador2()->getUser() + " ha ganado la partida";
+												strcpy(buffer, mensaje.c_str());
 											}
 
-											// Comprobar si hay empate
-											if (!partidas[j]->ganadorPartida() && !partidas[j]->hayEspacios())
+											send(partidas[j]->getJugador1()->getIdSocket(), buffer, sizeof(buffer), 0);
+											send(partidas[j]->getJugador2()->getIdSocket(), buffer, sizeof(buffer), 0);
+
+											partidas[j]->getJugador1()->setState(Estado::LOGGED);
+											partidas[j]->getJugador2()->setState(Estado::LOGGED);
+
+											// Eliminar partida
+											partidas.erase(partidas.begin() + j);
+											break;
+										}
+
+										// Comprobar si hay empate
+										if (!partidas[j]->ganadorPartida() && !partidas[j]->hayEspacios())
+										{
+											bzero(buffer, sizeof(buffer));
+											strcpy(buffer, "+Ok.Se ha producido un empate en la partida");
+											send(partidas[j]->getJugador1()->getIdSocket(), buffer, sizeof(buffer), 0);
+											send(partidas[j]->getJugador2()->getIdSocket(), buffer, sizeof(buffer), 0);
+
+											partidas[j]->getJugador1()->setState(Estado::LOGGED);
+											partidas[j]->getJugador2()->setState(Estado::LOGGED);
+
+											// Eliminar partida
+											partidas.erase(partidas.begin() + j);
+											break;
+										}
+									}
+
+									// Mostar tablero
+									string mensajeTablero = "+Ok.Nuevo tablero. ";
+									for (int j = 0; j < partidas.size(); j++)
+									{
+										if (partidas[j]->getJugador1()->getIdSocket() == i || partidas[j]->getJugador2()->getIdSocket() == i)
+										{
+											for (int k = 0; k < 6; k++)
+											{
+												for (int l = 0; l < 7; l++)
+												{
+													mensajeTablero += partidas[j]->getTablero(k, l);
+													if (l != 6)
+														mensajeTablero += ",";
+												}
+												mensajeTablero += "; ";
+											}
+											// Envio tablero actualizado a ambos jugadores
+											bzero(buffer, sizeof(buffer));
+											strcpy(buffer, mensajeTablero.c_str());
+											send(partidas[j]->getJugador1()->getIdSocket(), buffer, sizeof(buffer), 0);
+											send(partidas[j]->getJugador2()->getIdSocket(), buffer, sizeof(buffer), 0);
+											if (idNextJugador != -1)
 											{
 												bzero(buffer, sizeof(buffer));
-												strcpy(buffer, "+Ok.Se ha producido un empate en la partida");
-												send(partidas[j]->getJugador1()->getIdSocket(), buffer, sizeof(buffer), 0);
-												send(partidas[j]->getJugador2()->getIdSocket(), buffer, sizeof(buffer), 0);
-
-												partidas[j]->getJugador1()->setState(Estado::LOGGED);
-												partidas[j]->getJugador2()->setState(Estado::LOGGED);
-
-												// Eliminar partida
-												partidas.erase(partidas.begin() + j);
+												strcpy(buffer, "+Ok.Turno de partida");
+												send(idNextJugador, buffer, sizeof(buffer), 0);
 											}
+											break;
 										}
 									}
 								}
@@ -650,7 +656,6 @@ int main()
 							printf("El socket %d, ha introducido ctrl+c\n", i);
 							close(i);
 							FD_CLR(i, &readfds);
-							// Encontrar posicion del cliente en el vector
 
 							// Encontrar posicion de la partida en el vector
 							for (int j = 0; j < partidas.size(); j++)

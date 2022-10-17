@@ -51,20 +51,25 @@ int Game::colocarFicha(int columna)
     {
         if (tablero[i][columna] == '-')
         {
-            if (turno == 1)
+            if (this->getTurno() == 1)
             {
                 tablero[i][columna] = 'o';
-                turno = 2;
+                this->setTurno(2);
             }
             else
             {
                 tablero[i][columna] = 'x';
-                turno = 1;
+                this->setTurno(1);
             }
             return 1;
         }
     }
     return -1;
+}
+
+void Game::setTurno(int turno)
+{
+    this->turno = turno;
 }
 
 bool Game::ganadorPartida()
@@ -78,11 +83,11 @@ bool Game::ganadorPartida()
             {
                 if (tablero[i][j] == 'o')
                 {
-                    ganador = 1;
+                    this->setGanador(1);
                 }
                 else
                 {
-                    ganador = 2;
+                    this->setGanador(2);
                 }
                 return true;
             }
@@ -97,11 +102,11 @@ bool Game::ganadorPartida()
             {
                 if (tablero[i][j] == 'o')
                 {
-                    ganador = 1;
+                    this->setGanador(1);
                 }
                 else
                 {
-                    ganador = 2;
+                    this->setGanador(2);
                 }
                 return true;
             }
@@ -116,11 +121,11 @@ bool Game::ganadorPartida()
             {
                 if (tablero[i][j] == 'o')
                 {
-                    ganador = 1;
+                    this->setGanador(1);
                 }
                 else
                 {
-                    ganador = 2;
+                    this->setGanador(2);
                 }
                 return true;
             }
@@ -135,17 +140,35 @@ bool Game::ganadorPartida()
             {
                 if (tablero[i][j] == 'o')
                 {
-                    ganador = 1;
+                    this->setGanador(1);
                 }
                 else
                 {
-                    ganador = 2;
+                    this->setGanador(2);
                 }
                 return true;
             }
         }
     }
     return false;
+}
+
+bool Game::columnaLlena(int col)
+{
+    // Comprobar que la columna no está llena
+    for (int i = 0; i < 6; i++)
+    {
+        if (tablero[i][col] == '-')
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+void Game::setGanador(int ganador)
+{
+    this->ganador = ganador;
 }
 
 int Game::getTurno()
@@ -182,17 +205,4 @@ void Game::setTablero(char tablero[6][7])
             this->tablero[i][j] = tablero[i][j];
         }
     }
-}
-
-void Game::tableroMierda(){
-    char tablero[6][7]={
-        {'-','-','-','-','-','-','x'},
-        {'-','-','-','-','-','x','-'},
-        {'-','-','-','-','o','-','-'},
-        {'-','-','-','x','-','-','-'},
-        {'-','-','-','-','-','-','-'},
-        {'-','-','-','-','-','-','-'}
-    };  
-    setTablero(tablero);
-
 }

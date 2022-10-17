@@ -26,11 +26,13 @@ class Game{
     public:
         Game(Jugador* jugador1, Jugador* jugador2);
         bool hayEspacios();
-        void tableroMierda();
+        bool columnaLlena(int columna);
         void setTablero(char tablero[6][7]);
         void imprimirTablero();
         int colocarFicha(int columna);
         int getTurno();
+        void setTurno(int turno);
+        void setGanador(int ganador);
         int getGanador();
         Jugador* getJugador1();
         Jugador* getJugador2();

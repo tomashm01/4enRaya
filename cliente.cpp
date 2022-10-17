@@ -128,16 +128,15 @@ int main()
 			string bufferStr(buffer);
 			vector<string> bufferSplit = split(bufferStr, '.');
 
-
 			if (bufferSplit.size()>1 && strcmp(bufferSplit[1].c_str(), "Nuevo tablero") == 0)
 			{
 				cout << "|1|2|3|4|5|6|7|" << endl
 					 << "|";
 				int contador = 0;
-				for (int i = 0; i < sizeof(buffer); i++)
+				for (int i = 0; i < bufferSplit[2].size(); i++)
 				{
 
-					if (buffer[i] == ';')
+					if (bufferSplit[2][i] == ';')
 					{
 						cout << "|" << endl;
 						contador++;
@@ -146,25 +145,19 @@ int main()
 							cout << "|";
 						}
 					}
-					else if (buffer[i] == '-')
+					else if (bufferSplit[2][i] == '-')
 					{
 						cout << " ";
 					}
-					else if (buffer[i] == ',')
+					else if (bufferSplit[2][i] == ',')
 					{
 						cout << "|";
 					}
-					else if (buffer[i] == 'x')
-					{
-						cout << "x";
-					}
-					else if (buffer[i] == 'o')
-					{
-						cout << "o";
-					}
-					else if (buffer[i] == ' ')
+					else if (bufferSplit[2][i] == ' ')
 					{
 						cout << "";
+					}else{
+						cout << bufferSplit[2][i];
 					}
 				}
 			}
@@ -175,10 +168,10 @@ int main()
 				cout << "|1|2|3|4|5|6|7|" << endl
 					 << "|";
 				int contador = 0;
-				for (int i = 0; i < sizeof(buffer); i++)
+				for (int i = 0; i < bufferSplit[2].size(); i++)
 				{
 
-					if (buffer[i] == ';')
+					if (bufferSplit[2][i] == ';')
 					{
 						cout << "|" << endl;
 						contador++;
@@ -187,23 +180,23 @@ int main()
 							cout << "|";
 						}
 					}
-					else if (buffer[i] == '-')
+					else if (bufferSplit[2][i] == '-')
 					{
 						cout << " ";
 					}
-					else if (buffer[i] == ',')
+					else if (bufferSplit[2][i] == ',')
 					{
 						cout << "|";
 					}
-					else if (buffer[i] == 'x')
+					else if (bufferSplit[2][i] == 'x')
 					{
 						cout << "x";
 					}
-					else if (buffer[i] == 'o')
+					else if (bufferSplit[2][i] == 'o')
 					{
 						cout << "o";
 					}
-					else if (buffer[i] == ' ')
+					else if (bufferSplit[2][i] == ' ')
 					{
 						cout << "";
 					}
